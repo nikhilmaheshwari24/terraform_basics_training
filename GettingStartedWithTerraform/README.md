@@ -80,3 +80,35 @@ So, we have now created our first resource using Terraform. Before we end this s
 ### But how do we know that? How do we know what resource types other than local_file are available under the provider called local? And finally, how do we know what arguments are expected by the local_file resource? 
 
 Earlier, we mentioned that Terraform supports over 100 providers, including the local provider we have used in this example. Other common examples are AWS to deploy resources in Amazon AWS cloud, Azure, GCP, Ali Cloud, etcetera. Each of these providers have a unique list of resources that can be created on that specific platform. And each resource can have a number of required or optional arguments that are needed to create that resource And we can create as many resources of each type as needed. It is impossible to remember all of these options, and of course, we don't have to do that. **`Terraform documentation`** is extremely comprehensive, and it is the single source of truth that we need to follow. If we look up the `local` provider within the documentation, we can see that it only has one type of resource called the `local_file`. Under the `arguments` section, we can see that there are several arguments that the resource block accepts, out of which only one is mandatory, the `filename`. The rest of the arguments are optional. That's it for this lecture. Now let's head over to the hands on labs and practice working with HCL and create our first resource using Terraform.
+
+## Update and Destroy Infrastructure
+
+In this lecture, we will learn how to update and destroy infrastructure using Terraform. In the previous lecture, we saw how to create a local file. Now let us see how we can update and destroy this resource using Terraform. 
+
+First, let us try to update this resource. Let us add in a `file_permission` argument to update the permission of the file to 0700 instead of the default value of 0777. This will remove any permission for everyone else except the owner of the file. 
+
+```bash
+resource "local_file" "pet" {
+    filename = "/root/pets.txt"
+    content = "We love pets!"
+    file_permission = "0700"
+}
+```
+
+Now, if we're on Terraform plan, we will see an output like this. From the output, we can see that the resource will be replaced. The minus plus symbol in the beginning of the resource name in the plan implies that it will be deleted and then recreated. The line with the command that reads **forces replacement** is responsible for the deletion and recreation. In this example, this is caused by the file permission argument that we added to the configuration file. 
+
+**`Even though the change we made was trivial, Terraform will delete the old file and then create a new file with the updated permissions. This type of infrastructure is called an immutable infrastructure.`** 
+
+We saw this briefly when we discussed the different types of IAC tools. If you want to go ahead with the change, use the Terraform apply command and then type "yes" when prompted. 
+
+```bash
+terraform apply
+```
+
+Upon confirmation, the existing file is deleted and recreated with the new permissions. To delete the infrastructure completely, run the Terraform destroy command. This command shows the execution plan as well, and you can see the resource and all of its arguments have a minus symbol next to them. This indicates that the resource will be destroyed. 
+
+```bash
+terraform destroy
+```
+
+To go ahead with the destroy confirm "yes" in the prompt. This will delete all the resources in the current configuration directory. In this example, it deletes the file /root/pets.txt. That's it for this lecture. Let's head over to the hands-on labs and practice updating and deleting infrastructure resources using Terraform.
