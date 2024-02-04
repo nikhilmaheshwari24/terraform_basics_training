@@ -203,15 +203,15 @@ Let us now look at **`sets`**. Set is similar to a list. The difference between 
 
 ```bash
 variable "prefix" {                                     |variable "prefix" {
-    default = ["Mr", "Mrs", "Sir"]                      |   default = ["Mr", "Mrs", "Sir", "Sir"]
+    default = ["Mr", "Mrs", "Sir"]      ✅              |   default = ["Mr", "Mrs", "Sir", "Sir"]   ❌   
     type = set(string)                                  |   type = set(string)
 }                                                       |}
 variable "fruit" {                                      |variable "fruit" { 
-    default = ["apple", "banana"]                       |   default = ["apple", "banana", "banana"]
+    default = ["apple", "banana"]       ✅              |   default = ["apple", "banana", "banana"] ❌
     type = set(string)                                  |   type = set(string)
 }                                                       |}
 variable "age" {                                        |variable "age" { 
-    default = [10, 12, 15]                              |   default = [10, 12, 15, 10]
+    default = [10, 12, 15]              ✅              |   default = [10, 12, 15, 10]              ❌
     type = set(number)                                  |   type = set(number)
 }                                                       |}
 ```
