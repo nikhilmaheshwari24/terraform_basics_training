@@ -205,15 +205,15 @@ Let us now look at **`sets`**. Set is similar to a list. The difference between 
 variable "prefix" {                                     |variable "prefix" {
     default = ["Mr", "Mrs", "Sir"]                      |   default = ["Mr", "Mrs", "Sir", "Sir"]
     type = set(string)                                  |   type = set(string)
-}                                                        }
+}                                                       |}
 variable "fruit" {                                      |variable "fruit" { 
     default = ["apple", "banana"]                       |   default = ["apple", "banana", "banana"]
     type = set(string)                                  |   type = set(string)
-}                                                        }
+}                                                       |}
 variable "age" {                                        |variable "age" { 
     default = [10, 12, 15]                              |   default = [10, 12, 15, 10]
     type = set(number)                                  |   type = set(number)
-}                                                        }
+}                                                       |}
 ```
 
 The next type of variable that we are going to look at are **`objects`**. With objects, we can create complex data structures by combining all the variable types that we have seen so far. For example, let us consider a new variable called "bella", which is the name of a cat. This variable is used to define the different features of this cat, such as its name which is a string; the color, which is a string as well; age, which is a number; the food that it eats, which is a list of strings; and a Boolean value indicating if it's a favorite pet or not. 
