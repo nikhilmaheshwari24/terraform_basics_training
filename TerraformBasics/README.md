@@ -254,3 +254,205 @@ variable "kitty" {
 ```
 
 That's it for this lecture. Let's head over to the hands-on labs and explore working with variable types in Terraform.
+
+## Using Variables in Terraform
+
+In this lecture, we will take a look at the different ways in which we can make use of input variables in Terraform. So far, we have created input variables in Terraform, and assigned default values to it based on the variable type. This is just one of the ways to pass in values to the variable. Earlier, we learned that the default parameter in a variable block is optional. This means that we can very well have our variable block look like this. 
+
+```bash
+# variables.tf
+variable "filename" {
+
+}
+variable "content" {
+
+}
+variable "prefix" {
+    
+}
+variable "separator" {
+
+}
+variable "length" {
+
+}
+```
+
+### What would happen if we run Terraform commands now? 
+
+When we run Terraform apply, we will be prompted to enter values for each variable used in an interactive mode. If we do not want to supply values in an interactive mode, we can also make use of command line flags like this. 
+
+```bash
+terraform apply -var "filename=/root/pets.txt" -var "content=We love Pets!" -var "prefix=Mrs" -var "separator=." -var "length=2"
+```
+
+With the Terraform command, we can make use of the **`-var`** option with the variable name equals to the value format. We can pass in as many variables as we want with this method by making use of the -var flag multiple times. We can also make use of environment variables with the **`TF_VAR_`** followed by the name of a declared variable like this. In this example, the TF_VAR_ filename sets the value of the variable called "filename" to the value "/root/pets.txt". Similarly, the variable called length now has the value of 2. 
+
+```bash
+export TF_VAR_filename="/root/pets.txt"
+export TF_VAR_content="We love pets!"
+export TF_VAR_prefix="Mrs."
+export TF_VAR_separator="."
+export TF_VAR_length="2"
+```
+
+Finally, when we are dealing with a lot of variables, we can load values by making use of variable definition files like this. These variable definition files can be named anything but should always end in either **`.tfvars`** or **`.tfvars.json`**. Here, we have declared variables and their values in a file called terraform.tfvars.
+
+```bash
+# terraform.tfvars
+filename = "/roots/pets.txt"
+content = "We love pets!"
+prefix = "Mrs"
+separator = "."
+length = "2"
+```
+
+If you look at the syntax used to create this file, you'll observe that this is using the same syntax of an HCL file, but it only consists of variable assignments. The variable definition file is called terraform.tfvars or terraform.tfvars.json or by any other name ending with **`.auto.tfvars`** or **`.auto.tfvars.json`** will be automatically loaded by Terraform. If you use any other filename such as variable.tfvars, for example, you will have to parse it along with a command line flag called **`-var-file`** like this. 
+
+```bash
+terraform apply -var-file variables.tfvars
+```
+
+Finally, it is important to note that we can use any of the options that we have seen in this lecture to assign values to the variables. If we use multiple ways to assign values for the same variable, Terraform follows the variable definition precedence to understand which value it should accept. To illustrate this, let us make use of a simple example. In this case, we have a main configuration file with a single resource. A local file which will create file at a path declared in a variable called filename. In the variables.tf file, we have not specified a default value for this variable, and we have assigned different values to this variable in multiple ways. We have exported the environment variable called **`TF_VAR_filename`** with the value of /root/cats.txt. The **`terraform.tfvar`** file has a value of /root/pets.txt for the same variable. We have also made use of a variable definition file with the name **`variable.auto.tfvars`** with the value of /root/mypet.txt, and finally, we are also making use of the **`-var`** option while running the Terraform apply command with a value of /root/best-pet.txt. 
+
+```bash
+export TF_VAR_filename="/root/cats.txt"
+
+# terraform.tfvars
+filename = "/root/pets.txt"
+
+# variable.auto.tfvars
+filename = "/root/mypet.txt"
+
+terraform apply -var "filename=/root/best-pet.txt"
+```
+
+### In this case, which one of these values would be accepted? 
+
+Terraform follows a variable definition precedence order to determine this. First, it loads the environment variables. Next, the value in the terraform.tfvars file. This is followed by any file that ends with the .auto.tfvars or .auto.tfvars.json in an alphabetical order. Finally, Terraform considers the command line flag of -var or -var-file, which takes the highest priority and will overwrite any of the previous values. 
+
+```text
+-var or -var-file (CLI Flags) > *.auto.tfvars (alphabetical order) > terraform.tfvars > Environment Variables
+```
+
+In this case, the variable filename will be assigned the value of /root/best-pet.txt. That's it for this lecture. Let's head over to the hands-on lab and practice working with the concepts that we learned in this lecture.
+
+## Resource Attributes
+
+In this lecture, we will learn how to link two resources together by making use of resource attributes. In the last few lectures, we saw how to use variables to improve the reusability of our code. Right now, we have two resources in our configuration file. Each of this resource has a set of arguments that are used to create that resource. For the file resource, we have used the filename and content as the arguments. For the pet resource, we have used the prefix, separator and length. When this configuration is applied, Terraform creates a file and a random_pet resource. The name of the random_pet is displayed on the screen as an ID, which is Mr. Bull in this case. As it stands, there is no dependency between these two resources, but this rarely ever happens in a real world infrastructure provisioning process. There are bound to be multiple resources that are dependent on each other. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = var.filename
+    content = "My favorite pet is Mr.Cat"
+}
+
+resource "random_pet" "my-pet" {
+    prefix = var.prefix
+    separator = var.separator
+    length = var.length
+}
+```
+
+### What if we want to make use of the output of one resource and use it as an input for another one? What if we want the content of the file to use the name generated by the random_pet resource? 
+
+Currently, the content of the file is set to "My favorite pet is Mr. Cat". What if we want it to be set to the name that is generated by the random_pet resource? To understand this, let us jump back to the documentation for the random_pet resource in registry.terraform.io. You would have noticed that there are plenty of examples which are provided in the documentation, including examples for the arguments, but there is also a section called attribute reference, which provides the list of attributes returned back from the resource after you run a Terraform apply. 
+
+In this case, the random_pet resource returns just one attribute called ID, which is of type string. The ID is the pet name generated after we run Terraform apply as we have seen before. Our goal is to make use of the attribute called ID and to make use of it as the content of the local_file resource. For this, we can make use of an expression like this. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = var.filename
+    content = "My favorite pet is ${random_pet.my-pet.id}"
+}
+
+resource "random_pet" "my-pet" {
+    prefix = var.prefix
+    separator = var.separator
+    length = var.length
+}
+```
+
+This expression is used to reference the attribute from the resource called my-pet. The syntax for using this reference expression is resource type followed by the resource name and the attribute to be used, all of which are separated by a period or a dot. The resource type in this example is random_pet. This is followed by my-pet, which is the resource name and the attribute used is ID. 
+
+You would have also noticed that we are making use of the dollar symbol followed by the expression which is enclosed within curly braces. This is known as an **`interpolation`** sequence. Since the content argument already uses a string type data, this sequence is used to evaluate the expression given between the curly braces, convert the result to a string, and then insert it to the final string, like this. 
+
+Now, let us apply the changes made and allow Terraform to recreate the local file. In the output, you can see that the content is being replaced to our desired value, and it contains the name of the pet that was generated by the random_pet resource.
+
+## Resource Dependencies
+
+In this lecture, we will take a look at the different types of resource dependencies in Terraform. in the previous lecture, we saw how to link one resource to another using reference attributes. By making use of reference expression and interpolation, we were able to make use of the output of the random_pet resource as an input for the local file resource. now when Terraform creates these resources, it knows about the dependency since the local file resource depends on the output of the random_pet resource. As a result, it uses the following order to provision them. first Terraform crazy random_pet resource, and then it creates a local file resource. When resources are deleted, and Terraform deletes it in the reverse order, the local file first and then the random bid. This type of dependency is called the **`implicit dependency`**. Here, we're not explicitly specifying which resource is dependent on which other resource. Terraform figures it out by itself. 
+
+However, there's another way to specify dependency within the configuration file. For example, let us make use of the older configuration file without making use of the reference expression for the file content. If you still want to make sure that the local_file resource is created after the random_pet, we can do this by using the depends on argument like this. here we have added a **`depends_on`** argument inside the resource block for the local file, and we are provided a list of dependencies that include the random_pet resource called the my pet. This will ensure that the local file is only created after the random_pet resource is created. This type of dependency is called an **`explicit dependency`**. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = var.filename
+    content = "My favorite pet is Mr.Cat"
+
+    depends_on = [
+        random_pet.my-pet
+    ]
+}
+
+resource "random_pet" "my-pet" {
+    prefix = var.prefix
+    separator = var.separator
+    length = var.length
+}
+```
+
+Explicitly specifying a dependency is only necessary when a resource relies on some other resource indirectly, and it does not make use of a reference expression as seen in this case.
+
+## Output Variables
+
+Let us now look at output variables in Terraform. So far, we have used input variables and reference expressions in our Terraform configuration files. Along with input variables, Terraform also supports output variables. These variables can be used to store the value of an expression in Terraform. For example, let us go back to the configuration file that we used in the previous lecture. We already know that the random pet resource will generate the random pet name using the attribute called ID when we apply the configuration. To save this ID in an output variable called pet name, we can create an output block like this. The syntax used to create this output block is the keyword called output followed by the name that we want to call this variable. Inside this block, the mandatory argument for value is the reference expression. We can also add a description, which is an optional argument to describe what this output variable will be used for. 
+
+```bash
+# variables.tf
+variable "filename" {
+    default = "/root/pets.txt"
+}
+variable "content" {
+    default = "We love pets!"
+}
+variable "prefix" {
+    default = "Mrs"
+}
+variable "separator" {
+    default = "."
+}
+variable "length" {
+    default = "1"
+}
+
+# main.tf
+resource "local_file" "pet" {
+    filename = var.filename
+    content = "My favorite pet is ${random_pet.my-pet.id}"
+}
+
+resource "random_pet" "my-pet" {
+    prefix = var.prefix
+    separator = var.separator
+    length = var.length
+}
+
+output pet-name {
+    value = random_pet.my-pet.id
+    description = "Record the value of pet ID generated by the random_pet resource"
+}
+```
+
+Once this block has been created, when we run Terraform apply, we can see that the output variable is printed on the screen. Once the resource has been created, we can also make use of the Terraform output command to print the value of the output variables. The command Terraform output by itself will print all the output variables defined and all the files in the current configuration directory. We can also use this command specifically to print the value of an existing output variable like this. 
+
+```bash
+terraform output
+
+terraform output pet-name
+```
+
+Now, you may wonder where we can make use of these output variables. We already saw that dependent resources can make use of reference expressions to get the output from one resource block as an input to another block. As such, output variables are not really required here. The best use of Terraform output variables is when you want to quickly display details about a provision resource on the screen or to feed the output variables to other IaC tools such as an ad-hoc script or answerable playbook for configuration management and testing.
