@@ -2,35 +2,70 @@
 
 ## Using Terraform Providers
 
-In this lecture, let's take a look at providers in more detail. We saw in the previous lecture that after we write a Terraform configuration file, the first thing to do is to initialize the directory with the Terraform init command. When we run Terraform init within a directory containing the configuration files, Terraform downloads and installs plugins for the providers used within the configuration. These can be plugins for cloud providers such as AWS, GCP, Azure, or something as simple as the local provider that we used to create a local file type resource. 
+In this lecture, let's take a look at providers in more detail. We saw in the previous lecture that after we write a Terraform configuration file, the first thing to do is to initialize the directory with the `terraform init` command. When we run Terraform init within a directory containing the configuration files, Terraform downloads and installs plugins for the providers used within the configuration. These can be plugins for cloud providers such as AWS, GCP, Azure, or something as simple as the local provider that we used to create a local file type resource. 
+
+```bash
+terraform init
+```
 
 Terraform uses a plugin-based architecture to work with hundreds of such infrastructure platforms. Terraform providers are distributed by HashiCorp and are publicly available in the Terraform Registry at the URL registry.terraform.io. 
 
-There are three tiers of providers. The first one is the official provider. These are owned and maintained by **`HashiCorp`**, and include the major cloud providers such as AWS, GCP, and Azure. The local provider that we have used so far is also an official provider. The second type of provider is a **`partner provider`**. A partner provider is owned and maintained by a third-party technology company that has gone through a partner provider process with HashiCorp. Some of the examples are the BIG-IP provider from `F5` networks, `Heroku`, `DigitalOcean`, etcetera. Finally, we have the community providers that are published and maintained by **`individual contributors`** of the HashiCorp community. 
+There are three tiers of providers. The first one is the official provider. These are owned and maintained by **`HashiCorp`**, and include the major cloud providers such as AWS, GCP, and Azure. The local provider that we have used so far is also an official provider. The second type of provider is a **`partner provider`**. A partner provider is owned and maintained by a third-party technology company that has gone through a partner provider process with HashiCorp. Some of the examples are the BIG-IP provider from `F5 Networks`, `Heroku`, `DigitalOcean`, etcetera. Finally, we have the community providers that are published and maintained by **`individual contributors`** of the HashiCorp community. 
 
-A Terraform init command when run, shows the version of the plugin that has been installed. In this case, we can see that the plugin name **`hashicorp/local`** with the version 2.0.0 has been installed in the directory. The Terraform init is a safe command, and it can be run as many times as needed without impacting the actual infrastructure that is deployed. The plugins are downloaded into a hidden directory called **`.terraform/plugins`** in the working directory containing the configuration files. In our example, the working directory is /root/terraform-local-file. The plugin name that you see here, hashicorp/local, is also known as the source address. This is an identifier that is used by Terraform to locate and download the plugin from the registry. 
+A Terraform init command when run, shows the version of the plugin that has been installed. In this case, we can see that the plugin name **`hashicorp/local`** with the version `2.0.0` has been installed in the directory. The Terraform init is a safe command, and it can be run as many times as needed without impacting the actual infrastructure that is deployed. The plugins are downloaded into a hidden directory called **`.terraform/plugins`** in the working directory containing the configuration files. In our example, the working directory is /root/terraform-local-file. The plugin name that you see here, hashicorp/local, is also known as the `source address`. This is an identifier that is used by Terraform to locate and download the plugin from the registry. 
 
-Let's take a closer look at the format of the name. The first part of the name, which in this case is hashicorp, is the organizational namespace. This is followed by the type, which is the name of the provider such as local. Other examples of providers are AWS, AzureRM, Google, Random, etcetera. 
+Let's take a closer look at the format of the name. The first part of the name, which in this case is hashicorp, is the `organizational namespace`. This is followed by the `type`, which is the name of the provider such as local. Other examples of providers are AWS, AzureRM, Google, Random, etcetera. 
 
-The plugin name can also optionally have a hostname in front. The hostname is the name of the registry where the plugin is located. If omitted, it defaults to registry.terraform.io, which is HashiCorp's public registry. Given the fact that the local provider is stored in the public Terraform Registry within the HashiCorp namespace, the source address for it can be represented as **`registry.terraform.io/hashicorp/local`**, or simply by **`hashicorp/local`** by omitting the hostname. 
+The plugin name can also optionally have a `hostname` in front. The hostname is the name of the registry where the plugin is located. If omitted, it defaults to `registry.terraform.io`, which is HashiCorp's public registry. Given the fact that the local provider is stored in the public Terraform Registry within the HashiCorp namespace, the source address for it can be represented as **`registry.terraform.io/hashicorp/local`**, or simply by **`hashicorp/local`** by omitting the hostname. 
+
+```bash
+# Hostname/OrganizationalNamespace/Type
+registry.terraform.io/hashicorp/local
+
+# OrganizationalNamespace/Type
+hashicorp/local
+```
 
 By default, Terraform installs the latest version of the provider. Provider plugins, especially the official ones, are constantly updated with newer versions. This is done to bring in new functionality or to add in bug fixes, and these can introduce breaking changes to your code. We can lock down our configuration files to make use of a specific provider version as well. We will see how to do that later in this course.
 
 ## Configuration Directory
 
-Now let's take a look at the configuration directory and the file naming conventions used in Terraform. So far, we have been working with a single configuration file called local.tf and this is within the directory called terraform/local/file, which is our configuration directory. This directory is not limited to one configuration file. We can create another configuration file like this. The cat.tf is another configuration file that makes use of the same local_file resource. When applied, it will create a new file called cat.txt. Terraform will consider any file with the .tf extension within the configuration directory. 
+Now let's take a look at the configuration directory and the file naming conventions used in Terraform. So far, we have been working with a single configuration file called `local.tf` and this is within the directory called terraform/local/file, which is our configuration directory. This directory is not limited to one configuration file. We can create another configuration file like this. The `cat.tf` is another configuration file that makes use of the same local_file resource. When applied, it will create a new file called cat.txt. Terraform will consider any file with the **`.tf`** extension within the configuration directory. 
 
-Another common practice is to have one single configuration file that contains all the resource blocks required to provision the infrastructure. A single configuration file can have as many number of configuration blocks that you need. A common naming convention used for such a configuration file is to call it the main.tf. There are other configuration files that can be created within the directory such as the `variables.tf`, `outputs.tf`, and `providers.tf`. We will talk more about these files in the later sections of this course. Now let's head over to the hands-on labs and explore working with providers.
+Another common practice is to have one single configuration file that contains all the resource blocks required to provision the infrastructure. A single configuration file can have as many number of configuration blocks that you need. A common naming convention used for such a configuration file is to call it the **`main.tf`**. There are other configuration files that can be created within the directory such as the **`variables.tf`**, **`outputs.tf`**, and **`providers.tf`**. We will talk more about these files in the later sections of this course. Now let's head over to the hands-on labs and explore working with providers.
 
 ## Mutliple Provider
 
-In this lecture, we will see how to use multiple providers and resources in Terraform. Until now we have been making use of a single provider called "local" to deploy a local file and the system. Terraform also supports the use of multiple providers within the same configuration. 
+In this lecture, we will see how to use multiple providers and resources in Terraform. Until now we have been making use of a single provider called **`local`** to deploy a local file and the system. Terraform also supports the use of multiple providers within the same configuration. 
 
-To illustrate this, let's make use of another provider called **`random`**. This provider allows us to create random resources such as a random ID or random integer or random password, etcetera. Let us see how to use this provider and create a resource called **`random_pet`**. This resource type will generate a random pet name when applied. By making use of the documentation, we can add a resource block to the existing `main.tf` file like this. Here, we are making use of the resource type called random_pet. In an earlier lecture, we saw that the resource type can be broken down to two parts. The keyword before the underscore is the provider which in this case is random. The keyword following it is the resource type which is the pet. Let's call this resource "my pet". Within this resource block, we will use three arguments. One is the `prefix` that is to be added to the pet name. The second argument is the `separator` between the prefix and the pet name that is generated. The final argument is the `length` which is the length of the pet name to be generated in words. 
+To illustrate this, let's make use of another provider called **`random`**. This provider allows us to create random resources such as a `random ID` or `random integer` or `random password`, etcetera. Let us see how to use this provider and create a resource called **`random_pet`**. This resource type will generate a random pet name when applied. By making use of the documentation, we can add a resource block to the existing `main.tf` file like this. Here, we are making use of the resource type called random_pet. In an earlier lecture, we saw that the resource type can be broken down to two parts. The keyword before the underscore is the provider which in this case is random. The keyword following it is the resource type which is the pet. Let's call this resource "my pet". Within this resource block, we will use three arguments. One is the `prefix` that is to be added to the pet name. The second argument is the `separator` between the prefix and the pet name that is generated. The final argument is the `length` which is the length of the pet name to be generated in words.
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = "/root/pets.txt"
+    content = "We love pets!"
+}
+
+resource "random_pet" "my-pet" {
+    prefix = "Mrs"
+    separator = "."
+    length = "1"
+}
+```
 
 A main.tf file now has resource definition for two different providers, one resource of the local_file type that we have already created earlier and another resource of type random_pet. Before we generate an execution plan and create these resources, we have to run the Terraform init command again. Now, this is a mandatory step, as the plugin for the random provider should be initializing the configuration directory before we can make use of it. 
 
+```bash
+terraform init
+```
+
 In the command output of the Terraform init, we can see that the local provider was previously installed and it will be reused. The plug-in for the random provider, on the other hand, will be installed as it was not used before. We can now run the Terraform plan to review the execution plan. As expected, the local file resource called "pet" will not be updated as it is unchanged from the previous apply. A new resource by the name of "my pet" will be created based on the new resource block that we just added. Now let's apply the configuration using Terraform apply. As expected, the local file resource is left as it is but now a new resource has been created which is called "my pet". Random provider is a logical provider and it displays the results of the pet name on the screen like this. Here, an attribute called ID which contains the name of the pet is written by the apply command. Before we move on, please know that in our illustration, the dog icon stands for a pet and we'll be making use of it throughout this course. The random_pet can generate any pet name and it does not have to be specifically a dog. Now, let's head over to the hands-on labs and explore working with multiple providers in Terraform.
+
+```bash
+terraform plan
+terraform apply
+```
 
 ## Using input Variables
 
