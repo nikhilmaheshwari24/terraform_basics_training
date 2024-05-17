@@ -154,3 +154,256 @@ data local_file "dog" {
 These details are of course, available in the Terraform documentation, under "Data sources." Within the documentation and under the attributes exported, we can see that the data source for a local file expose two attributes, the content and the Base64 encoded version of the content. 
 
 To distinguish between a resource and data sources, let's do a quick comparison. The resources are created with the resource block, and data sources are created with the data block. Resources in Terraform are used to create, update and destroy infrastructure, whereas a data source is used to read information from a specific resource. Regular resources are also called "managed resources" as it's an extension which is managed by Terraform. Data sources are also called data resources. That's it for this lecture. Now let's head over to the hands-on labs and practice working with data sources in Terraform.
+
+## Meta-Arguments
+
+In this lecture, we will take a look at meta arguments in Terraform. Until now, we have been able to create single resources such as a local file and a random pet resource using Terraform, but what if you want to create multiple instances of the same resource, say, three local files for example? If we were using a shell script or some other programming language, we could create multiple files like this. In this example, we have created a bash script called create files.sh, which uses a four-loop to create empty files inside the root directory. The files will be called pet, followed by the range from one to three. While we cannot use the same script as it is within the resource block, Terraform offers several alternatives to achieve the same goal, and these can be done by making use of specific meta arguments in Terraform. Meta arguments can be used within any resource block to change the behavior of resources. We've already seen two types of meta arguments already in this course. That **`depends_on`** for defining explicit dependency between resources and the **`lifecycle`** rules which define how the resources should be created, updated, and destroyed within Terraform. Now, let us look at some more meta arguments specifically related to loops in Terraform.
+
+## Count
+
+In this lecture, we will take a look at the Count Meta-Argument and its uses in Terraform. One of the easiest ways to create multiple instances of the local file is to make use of the **`count`** meta-argument. To do this, simply add an argument called count with a value greater than one. Here, we have used count is equal to three. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = var.filename
+    count = 3
+}
+
+# variables.tf
+variable "filename" {
+    default = "/root/pets.txt"
+}
+```
+
+When we try to run Terraform plan now, we can see that Terraform tries to create three resources instead of one. In the output of the Terraform apply command, we can see that three resources are created. The resources are identified by pet[0], where zero is within square brackets, pet[1] and pet[2]. The resource is now considered to be a list of resources with elements at index 0, 1 and 2. However, there is one problem with this approach. Since we have only specified the count, Terraform will try to create the same resource three times. Since the filename is not unique, Terraform will recreate the same file three times rather than creating three separate files which defeats the purpose of this task. A better way to do this and make sure that all the three resources have unique filenames is to make use of a list variable for filename. To do this, we have used default values with three elements, each corresponding to the name of the file that we want to create. Next, we want Terraform to make use of each element of this list as the value of the filename argument. In this example, Terraform should make three iterations as the count has a value of three. The first iteration should pick up the element at index 0 which is the file called pets.txt. This is followed by element at index 1 which is dogs.txt and finally cats.txt at index 2. To use this within the configuration file, we can make use of count.index in the expression for filename like this. Now when we are on Terraform apply, we can see that there are three files created inside this /root directory. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = var.filename[count.index]
+    count = 3
+}
+
+# variables.tf
+variable "filename" {
+    default = ["/root/pets.txt", "/root/dogs.txt", "/root/cats.txt"]
+}
+```
+
+#### What if we were to add a few more elements to the list in the future? 
+
+Say we wanted to add a few more files by the name of /root/cows.txt and ducks.txt. If we were to apply this configuration now, we would see that it would still create only three files, because we have set the count to a static value of 3. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = var.filename[count.index]
+    count = 3
+}
+
+# variables.tf
+variable "filename" {
+    default = ["/root/pets.txt", "/root/dogs.txt", "/root/cats.txt", "/root/cows.txt", "/root/ducks.txt"]
+}
+```
+
+We want the count to automatically pick up the number of items that are defined within the filename variable. To do this, we can set set the value of count to use a built-in function that would return the length of the list. This built-in function called **`length`** will set the value of count to 5. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = var.filename[count.index]
+    count = length(var.filename)
+}
+
+# variables.tf
+variable "filename" {
+    default = ["/root/pets.txt", "/root/dogs.txt", "/root/cats.txt", "/root/cows.txt", "/root/ducks.txt"]
+}
+```
+
+Terraform offers several built-in functions that allow us to manipulate values within expressions. One simple function that we can use here is the length function. The Length function is used to calculate the size of a list and we can use this function in the count meta-argument to dynamically determine the size of the filename variable. We are now ready to run Terraform apply. Before we do that, let’s change the default value for the filename variable back to three elements. That is it. If we run Terraform plan and apply now, we should see that three resources with distinct files names have been created. There is however a significant drawback when using the count meta-argument to loop through variables this way. To illustrate this, lets see the same example but this time, let us remove the element /root/pets.txt from the list. If we run Terraform plan now, we see that instead of deleting just one resource with the filename /root/pets.txt, Terraform is replacing two resources and deleting one resource. Why does it do that? We only want to remove the first element in this list and it looks like all elements are going to be replaced by this operation. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = var.filename[count.index]
+    count = 3
+}
+
+# variables.tf
+variable "filename" {
+    default = ["/root/dogs.txt", "/root/cats.txt"]
+}
+```
+
+To see why this is happening, let us first understand how count works. As we saw before, when we use count, the resources become a list of resources. To see this using Terraform, let us add an output variable to the main.tf file to print all details of this resource. Using the Terraform output command, we can see that the resource is now in the format of a list. Originally, the resource called pet is a list with three resources, each identified by its index. The first resource in the list creates the file by the name pets.txt and it is identified by pet with the index [0], zero enclosed in square brackets since it's a list. The second resource element is pet[1] which creates a file called dogs.txt and the third resource is pet[2], which creates a file called cats.txt. The first element in a list is always zero. As a result, when we deleted the element called /root/pets.txt, which was at index 0 to begin with, the element with value /root/dogs.txt shifts up and takes its place at index 0. Likewise, /root/cats.txt becomes the element at index 1 and the list now has only two elements in it. When we run Terraform plan now, Terraform can see that that the resources at index pet[0] and pet[1] have to be destroyed and replaced. This is owing to the change in their filenames. There is no resource pet[2], so it will delete this resource entirely. Although after the apply operation we will have the resources created as per our intended end state, this is not an ideal approach. We may not want the resources to be destroyed and recreated just because we removed an unrelated element from the list. We will see how to do fix this in the next lecture. Now, let’s head over to the hands-on labs and practice working with the count meta-arguments in Terraform.
+
+## For Each
+
+In this lecture, we will take a look at the for_each meta argument and its uses in Terraform. In the previous lecture, we saw that when we use count, the resources are created as a list, and this can have undesirable results when updating them. One way to overcome this is to make use of the **`for_each`** argument insert of count, like this. Next, to set the value of file name to each element in the list, we can make use of the expression **`each.value`** like this. However, there's a catch. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = each.value
+    for_each = var.filename
+}
+
+# variables.tf
+variable "filename" {
+    default = ["/root/pets.txt", "/root/dogs.txt", "/root/cats.txt"]
+}
+```
+
+If we run Terraform plan now, we will see an error. The for_each argument only works with a **`map`** or a **`set`**. In the variables.tf file, we are currently making use of a list containing string elements. There are a couple of ways to fix this. Either change the variable called filename to the type set. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = each.value
+    for_each = var.filename
+}
+
+# variables.tf
+variable "filename" {
+    type = set(string)
+    default = ["/root/pets.txt", "/root/dogs.txt", "/root/cats.txt"]
+}
+```
+
+In the variables lecture, we learned that a set is similar to a list, but it cannot contain duplicate elements. Once we change the variable type and then run Terraform plan, we should see that there are three files to be created. Another way to fix this error while retaining the variable type as a list is to make use of another built-in function. This time, we'll make use of the **`toset`** function, which will convert the variables from a list to a set. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = each.value
+    for_each = toset(var.filename)
+}
+
+# variables.tf
+variable "filename" {
+    type = list(string)
+    default = ["/root/pets.txt", "/root/dogs.txt", "/root/cats.txt"]
+}
+```
+
+Once this is done, Terraform plan command should now work as expected. Now let us replicate the same scenario as the one we did earlier with the count meta argument and delete the first element with the value/slash/root pets.txt from the list. When we run Terraform plan now, we can see that only one resource is said to be destroyed, the file with the name pets.txt. The other resources will be untouched. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = each.value
+    for_each = toset(var.filename)
+}
+
+# variables.tf
+variable "filename" {
+    type = list(string)
+    default = ["/root/dogs.txt", "/root/cats.txt"]
+}
+```
+
+To see how this is working, let us create an output variable called pets to print the resource details like we did with the example using count. From the Terraform output command, we can now see that the resources are stored as a map and not a list. When we use for_each instead of count, the resources are created as a map and not a list. This means that the resources are no longer identified by the index, thereby bypassing the issues that we saw when we use count. 
+
+```bash
+# main.tf
+resource "local_file" "pet" {
+    filename = each.value
+    for_each = toset(var.filename)
+}
+
+output "pets" {
+    value = local_file.pet
+}
+# variables.tf
+variable "filename" {
+    type = list(string)
+    default = ["/root/dogs.txt", "/root/cats.txt"]
+}
+```
+
+They are now identified by the keys which are file names/root/..txt and /root/cat.txt, which are used by the for_each argument in the configuration file. If we compare this to the earlier output that we got when we use count, we can see the difference in how the resources are created. The count option created it as a list and the for_each created it as a map. There are a few other meta arguments in Terraform such as provisioners, providers, backends, et cetera. We will see that later in this course. Now let's head over to the hands-on labs and practice working with the for_each meta argument in Terraform.
+
+## Version Constraint
+
+In this lecture, we will see how to make use of specific provider versions in Terraform. We saw earlier that providers use a plugin-based architecture and that most of the popular ones are available in the public Terraform registry. Without additional configuration, the Terraform init command downloads the latest version of the provider plugins that are needed by the configuration files. However, this is not something that we may desire every day. The functionality of a provider plugin may vary drastically from one version to another. Our Terraform configuration may not work as expected when using a version different than the one it was written in. Fortunately, we can make sure that a specific version of the provider is used by Terraform when we are on the Terraform init command. The instructions to you use a specific version of a provider is available in the provider documentation in the registry. For example, if we look up the local provider within the registry, the default version is 2.0.0, which is also the latest version as of this recording. To you use a different version, click on the version tab and it should open a drop down with all the older versions of the provider. Let us select version 1.4.0. To use this specific version of the local provider, click on the use provider tab on the right. This should open up the code block that we can copy and paste within our configuration. 
+
+```bash
+terraform {
+    required_providers {
+        local = {
+            source = "hashicorp/local"
+            version = "1.4.0"
+        }
+    }
+}
+```
+
+Here, we are making use of a new block called **`terraform`**, which is used to configure settings related to Terraform itself. To make use of a specific version of the provider, we need to make use of another block called required providers inside the Terraform block. Inside the required providers block, we can have multiple arguments for every provider that we want to use. In this example, we have one argument with the key called local for the local provider. The value for this argument is an object with the source address of the provider and the exact version that we want to install, which in this case is 1.4.0. With the Terraform block configured to use the version 1.4.0 of the local provider, when we run a Terraform init, we should see a message like this. Before we wrap up this lecture, let us look at the syntax used to define version constraints in Terraform. In the configuration for the local provider, we have specified version equal to 1.4.0. This allows Terraform to find and download this exact version of the local provider. However, there are other ways to use the version constraint. If we use the not equal to symbol instead, Terraform form will ensure that this specific version is not downloaded. In this case, we have specifically asked Terraform to not use the version 2.0.0. 
+
+```bash
+terraform {
+    required_providers {
+        local = {
+            source = "hashicorp/local"
+            version = "!=2.0.0"
+        }
+    }
+}
+```
+
+It downloads the previous version available, which is 1.4.0. If we want Terraform to make use of a version lesser than a given version, we can do that by making use of comparison operators like this, and to make use of a version greater than a specific version, we can make use of the greater than operator like this. 
+
+```bash
+terraform {
+    required_providers {
+        local = {
+            source = "hashicorp/local"
+            version = "< 2.0.0"
+        }
+    }
+}
+```
+
+We can also combine the comparison operators like this to make use of a specific version within a range. In this example, we want to make use of any version greater than 1.2.0, but lesser than 2.0.0, but also not the version 1.4.0 specifically. As a result, Terraform downloads the version 1.3.0, which is acceptable in this case. 
+
+```bash
+terraform {
+    required_providers {
+        local = {
+            source = "hashicorp/local"
+            version = "> 1.2.0, < 2.0.0, !=1.4.0"
+        }
+    }
+}
+```
+
+Finally, we can also make use of pessimistic constraint operators. This is defined by making use of the tilde greater than symbol like this. This operator allows Terraform to download the specific version or any available incremental version based on the value we provided. For example, here, we have given the value of 1.2, following the tilde greater than symbol. This means that Terraform can either download the version 1.2 or incremental version such as 1.3, 1.4, 1.5, all the way up until 1.9. 
+
+```bash
+terraform {
+    required_providers {
+        local = {
+            source = "hashicorp/local"
+            version = "~> 1.2"
+        }
+    }
+}
+```
+
+However, if we look at the provider documentation, we do not have a version 1.5 or anything above. The maximum version that we can make use of in this case is 1.4.0 and this is the version that is downloaded when we run Terraform init. Let us make use of another value. This time, 1.2.0, with the same pessimistic constraint operator. This time, Terraform can download the version 1.2.0 or the version 1.2.1 or the version 1.2.2 all the way up until 1.2.9. 
+
+```bash
+terraform {
+    required_providers {
+        local = {
+            source = "hashicorp/local"
+            version = "~> 1.2.0"
+        }
+    }
+}
+```
+
+Again, we only have a maximum version of 1.2.2 in the registry, and that's the version that will be downloaded when we run Terraform init. That's it for this lecture, head over to the hands-on labs and practice working with version constraints in Terraform.
